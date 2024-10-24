@@ -1,0 +1,167 @@
+---
+title: "Writing Functions"
+author: "Miriam Lachs"
+date: "2024-10-24"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(rvest)
+library(readxl)
+```
+
+
+## Writing my first function
+
+as an example here is a z-score computatioon 
+```{r}
+x_vec = rnorm(n=25, mean = 10, sd=3.5)
+
+(x_vec-mean(x_vec))/sd(x_vec)
+```
+
+Now I'll write a function to do this
+
+```{r}
+z_scores = function(x){
+  if (!is.numeric(x)){
+    stop("x needs to be numeric")
+  }
+  if (length(x)<5){
+    stop('you need at least 5 numbers to compute the z')
+  }
+  z= (x - mean(x))/sd(x)
+  return(z)
+}
+
+z_scores(x=x_vec)
+```
+
+does this always work?
+
+```{r, error=TRUE}
+z_scores(x=3)
+z_scores(x=c('my','name','is','miriam'))
+```
+
+## a new function 
+
+```{r}
+mean_and_sd = function(x){
+  mean_x=mean(x)
+  sd_x=sd(x)
+  
+  outdf=
+    tibble(
+      mean=mean_x,
+      sd= sd_x
+    )
+  return(outdf)
+}
+
+mean_and_sd(x_vec)
+```
+
+## Check stuff using a simulation 
+
+```{r}
+sim_df=
+  tibble(
+    x=rnorm(30,10,5)
+  )
+
+sim_df %>% 
+  summarise(
+    mean = mean(x),
+    sd = sd(x)
+  )
+```
+
+simulation function to check sample mean and sd
+
+```{r}
+sim_mean_sd = function(sample_size, true_mean,ture_sd){
+  sim_df=
+  tibble(
+    x=rnorm(sample_size,true_mean,ture_sd)
+  )
+
+out_df=sim_df %>% 
+  summarise(
+    mean = mean(x),
+    sd = sd(x))
+
+return(out_df)
+}
+
+sim_mean_sd(30,4,12)
+
+```
+
+## revisit LotR
+
+```{r}
+fellowship_df=
+  read_excel('LotR_Words.xlsx',range = "B3:D6") %>% 
+  mutate(movie='fellowship')
+
+two_towers_df=
+  read_excel('LotR_Words.xlsx',range = "F3:H6") %>% 
+  mutate(movie='two_towers')
+
+return_king_df=
+  read_excel('LotR_Words.xlsx',range = "J3:L6") %>% 
+  mutate(movie='return_king')
+```
+
+```{r}
+lotr_reader= function(movie,range){
+  out_df=read_excel('LotR_Words.xlsx',range = range) %>% 
+  mutate(movie=movie) %>% 
+  janitor::clean_names()%>% 
+    pivot_longer(
+    female:male,
+    names_to = "sex",
+    values_to = "words") |> 
+  mutate(race = str_to_lower(race))
+  
+  return(out_df)
+}
+
+lotr_reader('fellowship',"B3:D6")
+```
+
+
+```{r}
+nsduh_url = "http://samhda.s3-us-gov-west-1.amazonaws.com/s3fs-public/field-uploads/2k15StateFiles/NSDUHsaeShortTermCHG2015.htm"
+
+nsduh_html = read_html(nsduh_url)
+
+data_marj = 
+  nsduh_html |> 
+  html_table() |> 
+  nth(1) |>
+  slice(-1) %>% 
+  mutate(drug= 'marj')
+```
+
+```{r}
+drug_import= function(drug, tablenum,html){
+  drug_df = 
+  html |> 
+  html_table() |> 
+  nth(tablenum) |>
+  slice(-1) %>% 
+  mutate(drug= drug)
+  return(drug_df)
+}
+
+drug_import('cocaine',4,nsduh_html)
+```
+
+
+```{r}
+source('source/nsduh_import.R')
+```
+
